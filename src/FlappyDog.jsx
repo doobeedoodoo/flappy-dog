@@ -343,7 +343,7 @@ export default function FlappyDog() {
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.code === "Space") {
+      if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         jump();
       }
