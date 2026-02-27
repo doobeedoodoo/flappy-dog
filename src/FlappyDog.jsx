@@ -11,111 +11,23 @@ const PIPE_SPEED = 2.8;
 const PIPE_INTERVAL = 1600; // ms
 
 const DOG_X = 80;
-const DOG_SIZE = 36;
+const DOG_SIZE = 48;
 
 const NEON_COLORS = ["#00ffff", "#ff00ff", "#ffff00", "#00ff88", "#ff6600", "#aa44ff"];
 
-function drawRoundedRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function drawDog(ctx, x, y, vy, frame, dead = false) {
+function drawDog(ctx, img, x, y, vy, frame, dead = false) {
+  if (!img) return;
   const bobY = dead ? 0 : Math.sin(frame * 0.15) * 1.5;
   const tilt = dead ? 180 : Math.max(-25, Math.min(25, vy * 2.5));
+  const r = DOG_SIZE / 2;
   ctx.save();
-  ctx.translate(x + DOG_SIZE / 2, y + DOG_SIZE / 2 + bobY);
+  ctx.translate(x + r, y + r + bobY);
   ctx.rotate((tilt * Math.PI) / 180);
-
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.12)";
+  // Circular clip so the photo looks clean
   ctx.beginPath();
-  ctx.ellipse(0, DOG_SIZE / 2 + 4, 16, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Tail
-  ctx.fillStyle = "#F5A623";
-  ctx.beginPath();
-  const tailWag = Math.sin(frame * 0.25) * 8;
-  ctx.moveTo(-DOG_SIZE / 2 + 2, 4);
-  ctx.quadraticCurveTo(-DOG_SIZE / 2 - 12, -2 + tailWag, -DOG_SIZE / 2 - 6, -12 + tailWag);
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "#F5A623";
-  ctx.stroke();
-
-  // Body
-  ctx.fillStyle = "#F5C842";
-  drawRoundedRect(ctx, -DOG_SIZE / 2 + 2, -DOG_SIZE / 2 + 8, DOG_SIZE - 4, DOG_SIZE - 10, 10);
-  ctx.fill();
-
-  // Belly
-  ctx.fillStyle = "#FDE68A";
-  drawRoundedRect(ctx, -6, 0, 14, 10, 5);
-  ctx.fill();
-
-  // Head
-  ctx.fillStyle = "#F5C842";
-  drawRoundedRect(ctx, -DOG_SIZE / 2 + 4, -DOG_SIZE / 2, DOG_SIZE - 8, DOG_SIZE / 2 + 4, 10);
-  ctx.fill();
-
-  // Ear left
-  ctx.fillStyle = "#D4920A";
-  ctx.beginPath();
-  ctx.ellipse(-DOG_SIZE / 2 + 5, -DOG_SIZE / 2 + 4, 7, 10, -0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Ear right
-  ctx.beginPath();
-  ctx.ellipse(DOG_SIZE / 2 - 5, -DOG_SIZE / 2 + 4, 7, 10, 0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eyes
-  ctx.fillStyle = "#1a1a2e";
-  ctx.beginPath();
-  ctx.arc(-6, -DOG_SIZE / 2 + 10, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(6, -DOG_SIZE / 2 + 10, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eye shines
-  ctx.fillStyle = "white";
-  ctx.beginPath();
-  ctx.arc(-5, -DOG_SIZE / 2 + 8, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(7, -DOG_SIZE / 2 + 8, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Nose
-  ctx.fillStyle = "#1a1a2e";
-  ctx.beginPath();
-  ctx.ellipse(0, -DOG_SIZE / 2 + 18, 4, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mouth smile
-  ctx.strokeStyle = "#1a1a2e";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(0, -DOG_SIZE / 2 + 21, 4, 0, Math.PI);
-  ctx.stroke();
-
-  // Legs
-  ctx.fillStyle = "#D4920A";
-  drawRoundedRect(ctx, -10, DOG_SIZE / 2 - 10, 8, 14, 4);
-  ctx.fill();
-  drawRoundedRect(ctx, 2, DOG_SIZE / 2 - 10, 8, 14, 4);
-  ctx.fill();
-
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(img, -r, -r, DOG_SIZE, DOG_SIZE);
   ctx.restore();
 }
 
@@ -387,6 +299,7 @@ export default function FlappyDog() {
     deathY: 0,
   });
   const animRef = useRef(null);
+  const dogImgRef = useRef(null);
   const audioRef = useRef({ ctx: null, musicGain: null, musicIntervalId: null });
   const [displayState, setDisplayState] = useState("idle");
   const [displayScore, setDisplayScore] = useState(0);
@@ -420,6 +333,12 @@ export default function FlappyDog() {
       setDisplayState("idle");
       setDisplayScore(0);
     }
+  }, []);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/mimiw.png";
+    img.onload = () => { dogImgRef.current = img; };
   }, []);
 
   useEffect(() => {
@@ -520,7 +439,7 @@ export default function FlappyDog() {
       // Draw
       drawBackground(ctx, s.bgOffset, w, h);
       s.pipes.forEach((p) => drawPipe(ctx, p, h));
-      drawDog(ctx, DOG_X - DOG_SIZE / 2, s.dogY, s.dogVY, s.frame, s.gameState === "dead");
+      drawDog(ctx, dogImgRef.current, DOG_X - DOG_SIZE / 2, s.dogY, s.dogVY, s.frame, s.gameState === "dead");
     }
 
     animRef.current = requestAnimationFrame(loop);
@@ -611,12 +530,17 @@ export default function FlappyDog() {
       {displayState === "idle" && (
         <div className="overlay">
           <div className="overlay-box">
+            <img
+              src="/mimiw.png"
+              alt="Mimiw"
+              style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", marginBottom: 10, border: "3px solid #FFD700", boxShadow: "0 0 16px rgba(255,215,0,0.5)" }}
+            />
             <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: "2.4rem", color: "#FFD700", textShadow: "3px 3px 0 #b8860b, 0 0 20px rgba(255,215,0,0.4)", marginBottom: 8, letterSpacing: 1 }}>
-              🐶 Flappy Dog
+              Flappy Mimiw
             </div>
             <div className="overlay-title" style={{ fontSize: "1.4rem" }}>Ready to Fly? 🐾</div>
             <div className="overlay-sub" style={{ marginBottom: 10 }}>
-              Help the dog dodge the pipes!
+              Help Marley dodge the obstacles!
             </div>
             <div className="tap-hint">Press SPACE or Tap to Start</div>
           </div>
