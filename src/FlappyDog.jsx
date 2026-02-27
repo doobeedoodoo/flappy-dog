@@ -18,7 +18,7 @@ const NEON_COLORS = ["#00ffff", "#ff00ff", "#ffff00", "#00ff88", "#ff6600", "#aa
 function drawDog(ctx, img, x, y, vy, frame, dead = false) {
   if (!img) return;
   const bobY = dead ? 0 : Math.sin(frame * 0.15) * 1.5;
-  const tilt = dead ? 180 : Math.max(-25, Math.min(25, vy * 2.5));
+  const tilt = dead ? 0 : Math.max(-25, Math.min(25, vy * 2.5));
   const r = DOG_SIZE / 2;
   ctx.save();
   ctx.translate(x + r, y + r + bobY);
@@ -33,8 +33,9 @@ function drawDog(ctx, img, x, y, vy, frame, dead = false) {
 
 function drawPipe(ctx, pipe, h) {
   const color = pipe.color || "#00ffff";
-  const topBottom = pipe.gapY - PIPE_GAP / 2;
-  const bottomY = pipe.gapY + PIPE_GAP / 2;
+  const gap = pipe.gap ?? PIPE_GAP;
+  const topBottom = pipe.gapY - gap / 2;
+  const bottomY = pipe.gapY + gap / 2;
 
   [[0, topBottom], [bottomY, h - bottomY]].forEach(([y, height]) => {
     if (height <= 0) return;
@@ -374,13 +375,16 @@ export default function FlappyDog() {
 
         // Spawn pipes
         if (now - s.lastPipeTime > PIPE_INTERVAL) {
-          const minGapY = 120;
-          const maxGapY = h - 120 - 40;
+          const gap = Math.max(115, 200 - s.score * 5);
+          const margin = gap / 2 + 30;
+          const minGapY = margin;
+          const maxGapY = h - 40 - margin;
           s.pipes.push({
             x: w + 10,
             gapY: minGapY + Math.random() * (maxGapY - minGapY),
             passed: false,
             color: NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)],
+            gap,
           });
           s.lastPipeTime = now;
         }
@@ -417,8 +421,9 @@ export default function FlappyDog() {
 
         for (const p of s.pipes) {
           if (dogRight > p.x && dogLeft < p.x + PIPE_WIDTH) {
-            const topBottom = p.gapY - PIPE_GAP / 2;
-            const bottomY = p.gapY + PIPE_GAP / 2;
+            const pGap = p.gap ?? PIPE_GAP;
+            const topBottom = p.gapY - pGap / 2;
+            const bottomY = p.gapY + pGap / 2;
             if (dogTop < topBottom || dogBottom > bottomY) {
               s.gameState = "dead";
               s.deathY = s.dogY;
